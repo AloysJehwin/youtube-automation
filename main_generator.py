@@ -1,4 +1,26 @@
 def generate_video_from_drive(folder_id, on_video_title, output_file, task_path):
+    """
+    Generate video with enhanced captions from Google Drive folder.
+    
+    AUTHENTICATION SETUP (Choose one method):
+    
+    METHOD 1 - SERVICE ACCOUNT (Recommended - No browser popups):
+    1. Go to Google Cloud Console (console.cloud.google.com)
+    2. Create a new project or select existing one
+    3. Enable Google Drive API
+    4. Go to "Credentials" → "Create Credentials" → "Service Account"
+    5. Download the JSON key file and rename it to 'service-account-key.json'
+    6. Share your Google Drive folder with the service account email (found in the JSON file)
+    7. Place the JSON file in the same directory as this script
+    
+    METHOD 2 - OAUTH (Fallback - Improved to last longer):
+    1. Go to Google Cloud Console
+    2. Enable Google Drive API
+    3. Create OAuth 2.0 credentials (Desktop application)
+    4. Download and save as 'credentials.json'
+    5. The script will open browser for initial authentication
+    6. Tokens will be saved and refreshed automatically
+    """
     import os
     import glob
     import shutil
@@ -7,6 +29,9 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
     import numpy as np
     import pickle
     import io
+    import time
+    import uuid
+    import hashlib
     from PIL import Image, ImageDraw, ImageFont, ImageFilter
     from moviepy.editor import (
         ImageClip, concatenate_videoclips, AudioFileClip, CompositeVideoClip
@@ -16,26 +41,110 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
     from moviepy.video.VideoClip import TextClip
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaIoBaseDownload
-    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google.oauth2 import service_account
 
     SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+    SERVICE_ACCOUNT_FILE = 'service-account-key.json'  # Your service account key file
+    
+    # Create unique session ID for this process to avoid conflicts
+    session_id = str(uuid.uuid4())[:8]
+    process_hash = hashlib.md5(f"{folder_id}_{on_video_title}_{time.time()}".encode()).hexdigest()[:8]
+    unique_id = f"{session_id}_{process_hash}"
+    
+    print(f"Starting video generation with unique ID: {unique_id}")
+    
+    # Create unique directories and files for this process
     task_dir = os.path.dirname(output_file)
-    images_folder = os.path.join(task_dir, "downloaded_images")
-    audio_path = os.path.join(task_dir, "audio.mp3")
+    images_folder = os.path.join(task_dir, f"downloaded_images_{unique_id}")
+    audio_path = os.path.join(task_dir, f"audio_{unique_id}.mp3")
+    temp_dir = os.path.join(task_dir, f"temp_{unique_id}")
+    
+    # Ensure temp directory exists
+    os.makedirs(temp_dir, exist_ok=True)
+    
     custom_font = "Roboto-Bold.ttf"
+    title_font = "Trash Ghostly.ttf"  # New custom font for title
     target_resolution = (576, 1024)
 
     def authenticate_drive():
-        creds = None
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
-                creds = pickle.load(token)
-        if not creds or not creds.valid:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-            with open('token.pickle', 'wb') as token:
-                pickle.dump(creds, token)
-        return build('drive', 'v3', credentials=creds)
+        """
+        Authenticate using service account - no browser popup needed!
+        This method uses a service account key file for persistent authentication.
+        """
+        try:
+            # Method 1: Service Account Authentication (Recommended)
+            credentials = service_account.Credentials.from_service_account_file(
+                SERVICE_ACCOUNT_FILE, 
+                scopes=SCOPES
+            )
+            return build('drive', 'v3', credentials=credentials)
+        
+        except FileNotFoundError:
+            print(f"Service account file '{SERVICE_ACCOUNT_FILE}' not found.")
+            print("Falling back to OAuth authentication...")
+            
+            # Method 2: Fallback to improved OAuth with unique token files
+            from google_auth_oauthlib.flow import InstalledAppFlow
+            from google.auth.transport.requests import Request
+            
+            creds = None
+            token_file = f'token_{unique_id}.json'  # Unique token file for this process
+            
+            # Load existing credentials
+            if os.path.exists(token_file):
+                try:
+                    from google.oauth2.credentials import Credentials
+                    creds = Credentials.from_authorized_user_file(token_file, SCOPES)
+                except Exception as e:
+                    print(f"Error loading credentials: {e}")
+                    creds = None
+            
+            # Try loading shared token if unique one doesn't exist
+            if not creds and os.path.exists('token.json'):
+                try:
+                    from google.oauth2.credentials import Credentials
+                    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+                    # Save copy for this process
+                    if creds and creds.valid:
+                        with open(token_file, 'w') as token:
+                            token.write(creds.to_json())
+                except Exception as e:
+                    print(f"Error loading shared credentials: {e}")
+                    creds = None
+            
+            # If credentials are invalid or don't exist, get new ones
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    try:
+                        creds.refresh(Request())
+                        print("Successfully refreshed credentials!")
+                    except Exception as e:
+                        print(f"Error refreshing credentials: {e}")
+                        creds = None
+                
+                if not creds:
+                    # Use unique port for each process
+                    import random
+                    port = 8080 + random.randint(1, 100)
+                    
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        'credentials.json', 
+                        SCOPES,
+                        redirect_uri=f'http://localhost:{port}'
+                    )
+                    # Request offline access for refresh tokens
+                    creds = flow.run_local_server(
+                        port=port,
+                        access_type='offline',
+                        prompt='consent'  # Forces consent screen to get refresh token
+                    )
+                
+                # Save the credentials for next time
+                with open(token_file, 'w') as token:
+                    token.write(creds.to_json())
+                print(f"Credentials saved to {token_file}")
+            
+            return build('drive', 'v3', credentials=creds)
 
     def download_drive_folder(folder_id, image_folder, audio_filename):
         service = authenticate_drive()
@@ -72,7 +181,7 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
         img.thumbnail(target_size, Image.Resampling.LANCZOS)
         offset = ((target_size[0] - img.width) // 2, (target_size[1] - img.height) // 2)
         bg.paste(img, offset)
-        final_path = image_path.replace(".png", "_noborder.png")
+        final_path = image_path.replace(".png", f"_noborder_{unique_id}.png")
         bg.save(final_path)
         return final_path
 
@@ -80,46 +189,40 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
         overlay = Image.new("RGBA", size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
 
-        max_width = int(size[0] * 0.9)  # 90% of width (e.g. 518 px)
+        max_width = int(size[0] * 0.85)
         max_attempts = 10
-        font_size = int(size[1] * 0.045)
+        font_size = int(size[1] * 0.055)
 
-        # Try reducing font size until text fits
         for attempt in range(max_attempts):
             try:
-                font = ImageFont.truetype(custom_font, font_size)
+                font = ImageFont.truetype(title_font, font_size)  # Using Trash Ghostly font
             except:
-                font = ImageFont.load_default()
+                try:
+                    font = ImageFont.truetype(custom_font, font_size)  # Fallback to Roboto
+                except:
+                    font = ImageFont.load_default()  # Final fallback
 
             bbox = draw.textbbox((0, 0), title, font=font)
             text_w = bbox[2] - bbox[0]
 
             if text_w <= max_width:
                 break
-            font_size -= 2  # Reduce font size gradually
+            font_size -= 2
 
-        # Final bounding box and padding
         bbox = draw.textbbox((0, 0), title, font=font)
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
-        pad_x, pad_y = 80, 40
-        box_w, box_h = text_w + pad_x, text_h + pad_y
-        x = (size[0] - box_w) // 2
-        y = 50
+        
+        # Calculate position for centered text
+        x = (size[0] - text_w) // 2
+        y = 70
 
-        # Create rounded background box
-        box = Image.new("RGBA", (box_w, box_h), (0, 0, 0, 0))
-        draw_box = ImageDraw.Draw(box)
-        draw_box.rounded_rectangle([(0, 0), (box_w, box_h)], radius=30, fill=(0, 0, 0, 128))
-        overlay.paste(box, (x, y), box)
+        # Draw title text with Trash Ghostly font - clean and simple
+        draw.text((x, y), title, font=font, fill="white")
 
-        # Draw final text
-        draw.text((x + pad_x // 2, y + pad_y // 2), title, font=font, fill="white")
-
-        title_path = os.path.join(task_dir, "title_overlay.png")
+        title_path = os.path.join(temp_dir, f"title_overlay_{unique_id}.png")
         overlay.save(title_path)
         return title_path
-
 
     def blur_transition(clip, blur_duration=1.0):
         def fl(gf, t):
@@ -142,59 +245,107 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
         result = model.transcribe(audio_path)
         return result["segments"]
 
-    def create_caption_clips_typing(segments, video_width):
-        clips = []
-        max_width = video_width - 100
+    def create_simple_word_clip(word, start_time, duration, video_width):
+        """Create a simple but attractive word clip with fade effects"""
         elevation = 120
+        
+        # Create the text clip with light dark yellow color (no outline)
+        text_clip = TextClip(
+            txt=word,
+            fontsize=45,
+            font=custom_font,
+            color="#FFD700",  # Light dark yellow color
+            method="caption"
+        ).set_duration(duration).set_start(start_time)
+        
+        # Position at bottom center
+        text_clip = text_clip.set_position(("center", target_resolution[1] - 100 - elevation))
+        
+        # Add fade in/out effects
+        text_clip = text_clip.fadein(0.1).fadeout(0.1)
+        
+        return text_clip
+
+    def create_caption_clips_optimized(segments, video_width):
+        """Create optimized word-by-word captions with better performance"""
+        clips = []
+        
         for segment in segments:
-            words = segment["text"].split()
-            word_duration = (segment["end"] - segment["start"]) / len(words)
+            words = segment["text"].strip().split()
+            if not words:
+                continue
+                
+            # Calculate timing for each word
+            segment_duration = segment["end"] - segment["start"]
+            word_duration = max(0.4, segment_duration / len(words))  # Minimum 0.4s per word
+            
             current_start = segment["start"]
-            full_text = ""
-            for word in words:
-                full_text += word + " "
-                caption_path = os.path.join(task_dir, f"temp_caption_{len(clips)}.png")
-                text_clip = TextClip(
-                    txt=full_text.strip(),
-                    fontsize=40,
-                    font=custom_font,
-                    color="white",
-                    size=(max_width, None),
-                    method="caption"
-                ).set_start(current_start).set_duration(word_duration)
-                text_clip = text_clip.set_position(
-                    lambda t: (
-                        "center",
-                        target_resolution[1] - text_clip.size[1] - elevation
-                    )
+            
+            for i, word in enumerate(words):
+                # Clean up the word
+                word = word.strip()
+                if not word:
+                    continue
+                
+                # Create simple word clip
+                word_clip = create_simple_word_clip(
+                    word, 
+                    current_start, 
+                    word_duration,
+                    video_width
                 )
-                clips.append(text_clip)
-                current_start += word_duration
+                
+                clips.append(word_clip)
+                current_start += word_duration * 0.8  # 20% overlap for smooth flow
+        
         return clips
 
+    def create_background_for_captions(video_width, video_height):
+        """Create a simple background for better text readability"""
+        bg_height = 150
+        bg_y = video_height - bg_height
+        
+        # Create simple semi-transparent background
+        bg_img = Image.new("RGBA", (video_width, bg_height), (0, 0, 0, 80))
+        bg_path = os.path.join(task_dir, "caption_background.png")
+        bg_img.save(bg_path)
+        
+        return ImageClip(bg_path).set_duration(999).set_position((0, bg_y))
+
+    # Configure MoviePy settings with unique temp directory
     moviepy_config.change_settings({
         "FFMPEG_BINARY": "ffmpeg",
         "IMAGEMAGICK_BINARY": r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe",
-        "TEMP_DIR": task_path  # <= This line is the fix
-            })
-    for file in glob.glob(os.path.join(task_dir, "temp_caption_*.png")):
-        os.remove(file)
+        "TEMP_DIR": temp_dir  # Use unique temp directory
+    })
+    
+    # Clean up any existing temporary files for this session
+    for file in glob.glob(os.path.join(temp_dir, f"temp_caption_*_{unique_id}.png")):
+        try:
+            os.remove(file)
+        except:
+            pass
 
+    # Download content from Google Drive
     download_drive_folder(folder_id, images_folder, audio_path)
 
+    # Prepare images
     image_paths = []
     for i in range(1, 9):
         path = os.path.join(images_folder, f"image_{i}.png")
         styled = prepare_base_image(path, target_resolution)
         image_paths.append(styled)
 
+    # Setup audio and timing
     audio = AudioFileClip(audio_path)
     video_duration = audio.duration
     clip_duration = video_duration / len(image_paths)
 
+    # Create title overlay
     title_overlay_path = create_title_overlay(on_video_title, target_resolution)
     title_clip = ImageClip(title_overlay_path).set_duration(clip_duration).set_position(("center", "top"))
 
+    # Create main video clips
     clips = []
     for path in image_paths:
         bg_clip = ImageClip(path).set_duration(clip_duration).resize(target_resolution)
@@ -202,22 +353,77 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
         comp = CompositeVideoClip([bg_blurred, title_clip.set_duration(clip_duration)])
         clips.append(comp)
 
+    # Combine video clips
     video = concatenate_videoclips(clips, method="compose").set_fps(24)
     video_with_audio = video.set_audio(audio.set_duration(video.duration))
 
+    # Generate captions with optimized performance
+    print("Generating optimized captions...")
     segments = generate_captions(audio_path)
-    caption_clips = create_caption_clips_typing(segments, target_resolution[0])
+    
+    # Create optimized caption clips (no background box)
+    caption_clips = create_caption_clips_optimized(segments, target_resolution[0])
+    
+    # Combine everything without caption background
     final_video = CompositeVideoClip([video_with_audio] + caption_clips)
 
-    final_video.write_videofile(output_file, fps=24, codec="libx264", audio_codec="aac")
+    # Export final video
+    print("Exporting final video with animated captions...")
+    final_video.write_videofile(
+        output_file, 
+        fps=24, 
+        codec="libx264", 
+        audio_codec="aac",
+        preset="medium",
+        ffmpeg_params=["-crf", "23"]  # Good quality balance
+    )
 
-    for file in glob.glob(os.path.join(task_dir, "temp_caption_*.png")):
-        os.remove(file)
-    if os.path.exists(os.path.join(task_dir, "title_overlay.png")):
-        os.remove(os.path.join(task_dir, "title_overlay.png"))
+    # Clean up temporary files for this specific process
+    print(f"Cleaning up temporary files for session {unique_id}...")
+    
+    # Clean caption temp files
+    for file in glob.glob(os.path.join(temp_dir, f"temp_caption_*_{unique_id}.png")):
+        try:
+            os.remove(file)
+        except:
+            pass
+    
+    # Clean title overlay
+    title_overlay_path = os.path.join(temp_dir, f"title_overlay_{unique_id}.png")
+    if os.path.exists(title_overlay_path):
+        try:
+            os.remove(title_overlay_path)
+        except:
+            pass
+    
+    # Clean audio file
     if os.path.exists(audio_path):
-        os.remove(audio_path)
+        try:
+            os.remove(audio_path)
+        except:
+            pass
+    
+    # Clean images folder
     if os.path.exists(images_folder):
-        shutil.rmtree(images_folder)
-
+        try:
+            shutil.rmtree(images_folder)
+        except:
+            pass
+    
+    # Clean temp directory
+    if os.path.exists(temp_dir):
+        try:
+            shutil.rmtree(temp_dir)
+        except:
+            pass
+    
+    # Clean OAuth token file for this process (keep shared token.json)
+    token_file = f'token_{unique_id}.json'
+    if os.path.exists(token_file):
+        try:
+            os.remove(token_file)
+        except:
+            pass
+    
+    print(f"Video generation completed successfully! Output: {output_file}")
     return output_file

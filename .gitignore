@@ -1,5 +1,7 @@
 __pycache__/
 .vscode/
 venv/
+tasks/
 credentials.json
 token.pickle
+service-account-key.json
