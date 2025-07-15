@@ -1,0 +1,8 @@
+google-api-python-client
+google-auth-oauthlib
+moviepy==1.0.3
+Pillow
+openai-whisper
+numpy
+requests
+Pillow==9.5.0
