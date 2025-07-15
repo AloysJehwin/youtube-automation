@@ -246,7 +246,7 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
         return result["segments"]
 
     def create_simple_word_clip(word, start_time, duration, video_width):
-        """Create a simple but attractive word clip with fade effects"""
+        """Create word clip with clear, crisp transitions"""
         elevation = 120
         
         # Create the text clip with light dark yellow color (no outline)
@@ -261,13 +261,17 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
         # Position at bottom center
         text_clip = text_clip.set_position(("center", target_resolution[1] - 100 - elevation))
         
-        # Add fade in/out effects
-        text_clip = text_clip.fadein(0.1).fadeout(0.1)
+        # Short, crisp transitions for precise timing
+        fade_in_duration = 0.05   # Very quick fade in
+        fade_out_duration = 0.05  # Very quick fade out
+        
+        # Apply quick fade effects
+        text_clip = text_clip.fadein(fade_in_duration).fadeout(fade_out_duration)
         
         return text_clip
 
     def create_caption_clips_optimized(segments, video_width):
-        """Create optimized word-by-word captions with better performance"""
+        """Create precise word-by-word captions with clear-cut transitions"""
         clips = []
         
         for segment in segments:
@@ -275,9 +279,9 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
             if not words:
                 continue
                 
-            # Calculate timing for each word
+            # Calculate precise timing for each word - no overlaps
             segment_duration = segment["end"] - segment["start"]
-            word_duration = max(0.4, segment_duration / len(words))  # Minimum 0.4s per word
+            word_duration = segment_duration / len(words)  # Equal time per word
             
             current_start = segment["start"]
             
@@ -287,16 +291,18 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
                 if not word:
                     continue
                 
-                # Create simple word clip
+                # Create precise word clip with exact timing
                 word_clip = create_simple_word_clip(
                     word, 
                     current_start, 
-                    word_duration,
+                    word_duration,  # Exact duration, no extension
                     video_width
                 )
                 
                 clips.append(word_clip)
-                current_start += word_duration * 0.8  # 20% overlap for smooth flow
+                
+                # Move to next word with precise timing - no overlap
+                current_start += word_duration
         
         return clips
 
