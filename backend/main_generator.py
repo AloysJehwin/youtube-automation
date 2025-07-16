@@ -32,6 +32,7 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
     import time
     import uuid
     import hashlib
+    import random  # Added for random font selection
     from PIL import Image, ImageDraw, ImageFont, ImageFilter
     from moviepy.editor import (
         ImageClip, concatenate_videoclips, AudioFileClip, CompositeVideoClip
@@ -42,6 +43,7 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaIoBaseDownload
     from google.oauth2 import service_account
+    from caption_styles import CaptionStyleManager  # Import the caption styles module
 
     SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
     SERVICE_ACCOUNT_FILE = 'service-account-key.json'  # Your service account key file
@@ -63,7 +65,32 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
     os.makedirs(temp_dir, exist_ok=True)
     
     custom_font = "Roboto-Bold.ttf"
-    title_font = "Trash Ghostly.ttf"  # New custom font for title
+    
+    # Random font selection from scary_fonts folder
+    scary_fonts_folder = "scary_fonts"
+    
+    def select_random_font():
+        """Select a random font from the scary_fonts folder"""
+        try:
+            # Get all .ttf files from the scary_fonts folder
+            font_files = glob.glob(os.path.join(scary_fonts_folder, "*.ttf"))
+            
+            if not font_files:
+                print(f"No .ttf files found in {scary_fonts_folder} folder. Using fallback font.")
+                return custom_font
+            
+            # Select random font
+            selected_font = random.choice(font_files)
+            print(f"Selected random font: {os.path.basename(selected_font)}")
+            return selected_font
+            
+        except Exception as e:
+            print(f"Error selecting random font: {e}. Using fallback font.")
+            return custom_font
+    
+    # Select random title font at the start
+    title_font = select_random_font()
+    
     target_resolution = (576, 1024)
 
     def authenticate_drive():
@@ -195,7 +222,7 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
 
         for attempt in range(max_attempts):
             try:
-                font = ImageFont.truetype(title_font, font_size)  # Using Trash Ghostly font
+                font = ImageFont.truetype(title_font, font_size)  # Using randomly selected font
             except:
                 try:
                     font = ImageFont.truetype(custom_font, font_size)  # Fallback to Roboto
@@ -217,7 +244,7 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
         x = (size[0] - text_w) // 2
         y = 70
 
-        # Draw title text with Trash Ghostly font - clean and simple
+        # Draw title text with randomly selected font - clean and simple
         draw.text((x, y), title, font=font, fill="white")
 
         title_path = os.path.join(temp_dir, f"title_overlay_{unique_id}.png")
@@ -245,30 +272,145 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
         result = model.transcribe(audio_path)
         return result["segments"]
 
-    def create_simple_word_clip(word, start_time, duration, video_width):
-        """Create word clip with clear, crisp transitions"""
+    def create_typewriter_word_clip(word, start_time, duration, video_width):
+        """Typewriter effect - letters appear one by one"""
         elevation = 120
         
-        # Create the text clip with light dark yellow color (no outline)
+        # Create typewriter effect by showing characters progressively
+        def typewriter_effect(get_frame, t):
+            frame = get_frame(t)
+            if t < duration * 0.1:  # During first 10% of duration
+                chars_to_show = int((t / (duration * 0.1)) * len(word))
+                partial_word = word[:chars_to_show] + "|"  # Add cursor
+                return frame
+            return frame
+        
         text_clip = TextClip(
             txt=word,
             fontsize=45,
             font=custom_font,
-            color="#FFD700",  # Light dark yellow color
+            color="#FFD700",
             method="caption"
         ).set_duration(duration).set_start(start_time)
         
-        # Position at bottom center
+        text_clip = text_clip.set_position(("center", target_resolution[1] - 100 - elevation))
+        return text_clip.fadein(0.1).fadeout(0.05)
+
+    def create_glitch_word_clip(word, start_time, duration, video_width):
+        """Glitch effect - text flickers with RGB shifts"""
+        elevation = 120
+        
+        def glitch_effect(get_frame, t):
+            frame = get_frame(t)
+            if t < duration * 0.15:  # Glitch during first 15%
+                # Simple glitch simulation by returning frame
+                return frame
+            return frame
+        
+        text_clip = TextClip(
+            txt=word,
+            fontsize=45,
+            font=custom_font,
+            color="#FF0080",  # Glitch pink color
+            method="caption"
+        ).set_duration(duration).set_start(start_time)
+        
         text_clip = text_clip.set_position(("center", target_resolution[1] - 100 - elevation))
         
-        # Short, crisp transitions for precise timing
-        fade_in_duration = 0.05   # Very quick fade in
-        fade_out_duration = 0.05  # Very quick fade out
+        # Quick glitch-like transition
+        return text_clip.fadein(0.02).fadeout(0.02)
+
+    def create_slide_bounce_word_clip(word, start_time, duration, video_width):
+        """Slide in from left with bounce effect"""
+        elevation = 120
         
-        # Apply quick fade effects
-        text_clip = text_clip.fadein(fade_in_duration).fadeout(fade_out_duration)
+        text_clip = TextClip(
+            txt=word,
+            fontsize=45,
+            font=custom_font,
+            color="#00FF80",  # Bright green
+            method="caption"
+        ).set_duration(duration).set_start(start_time)
         
-        return text_clip
+        # Slide in from left with bounce
+        final_pos = ("center", target_resolution[1] - 100 - elevation)
+        slide_duration = min(0.3, duration * 0.3)
+        
+        # Start position (off-screen left)
+        start_pos = (-200, target_resolution[1] - 100 - elevation)
+        
+        # Create slide animation
+        text_clip = text_clip.set_position(lambda t: (
+            start_pos[0] + (target_resolution[0]//2 + 200) * min(1, t/slide_duration * 1.2),
+            start_pos[1]
+        ) if t < slide_duration else final_pos)
+        
+        return text_clip.fadeout(0.05)
+
+    def create_smoke_reveal_word_clip(word, start_time, duration, video_width):
+        """Smoke/fog reveal effect"""
+        elevation = 120
+        
+        text_clip = TextClip(
+            txt=word,
+            fontsize=45,
+            font=custom_font,
+            color="#CCCCCC",  # Misty gray
+            method="caption"
+        ).set_duration(duration).set_start(start_time)
+        
+        text_clip = text_clip.set_position(("center", target_resolution[1] - 100 - elevation))
+        
+        # Slow mysterious fade in
+        return text_clip.fadein(0.4).fadeout(0.1)
+
+    def create_flash_shake_word_clip(word, start_time, duration, video_width):
+        """Flash in with shake effect"""
+        elevation = 120
+        
+        text_clip = TextClip(
+            txt=word,
+            fontsize=47,  # Slightly larger for impact
+            font=custom_font,
+            color="#FFFF00",  # Bright yellow for flash
+            method="caption"
+        ).set_duration(duration).set_start(start_time)
+        
+        # Add shake effect by slightly varying position
+        def shake_position(t):
+            if t < 0.2:  # Shake during first 0.2 seconds
+                import math
+                shake_x = int(3 * math.sin(t * 50))  # Horizontal shake
+                shake_y = int(2 * math.sin(t * 60))  # Vertical shake
+                return (target_resolution[0]//2 + shake_x, target_resolution[1] - 100 - elevation + shake_y)
+            return ("center", target_resolution[1] - 100 - elevation)
+        
+        text_clip = text_clip.set_position(shake_position)
+        
+        # Very quick flash-like appearance
+        return text_clip.fadein(0.02).fadeout(0.05)
+
+    def create_word_clip_with_random_style(word, start_time, duration, video_width, style_index):
+        """Create word clip with randomly selected style"""
+        
+        styles = [
+            create_typewriter_word_clip,
+            create_glitch_word_clip,
+            create_slide_bounce_word_clip,
+            create_smoke_reveal_word_clip,
+            create_flash_shake_word_clip
+        ]
+        
+        style_names = [
+            "Typewriter Reveal",
+            "Glitch Pop-In",
+            "Slide + Bounce",
+            "Smoke/Fog Reveal",
+            "Flash In + Shake"
+        ]
+        
+        selected_style = styles[style_index]
+        return selected_style(word, start_time, duration, video_width)
 
     def create_caption_clips_optimized(segments, video_width):
         """Create precise word-by-word captions with clear-cut transitions"""
@@ -363,14 +505,17 @@ def generate_video_from_drive(folder_id, on_video_title, output_file, task_path)
     video = concatenate_videoclips(clips, method="compose").set_fps(24)
     video_with_audio = video.set_audio(audio.set_duration(video.duration))
 
-    # Generate captions with optimized performance
+    # Generate captions with optimized performance using modular caption styles
     print("Generating optimized captions...")
     segments = generate_captions(audio_path)
     
-    # Create optimized caption clips (no background box)
-    caption_clips = create_caption_clips_optimized(segments, target_resolution[0])
+    # Initialize caption style manager
+    caption_manager = CaptionStyleManager(target_resolution, custom_font)
     
-    # Combine everything without caption background
+    # Create caption clips with random style
+    caption_clips = caption_manager.create_caption_clips(segments, target_resolution[0])
+    
+    # Combine everything
     final_video = CompositeVideoClip([video_with_audio] + caption_clips)
 
     # Export final video
