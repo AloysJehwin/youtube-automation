@@ -1,0 +1,507 @@
+{
+  "name": "Youtube Story ideas",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        780,
+        360
+      ],
+      "id": "161c0ecc-7b09-4d7e-9d1e-bc9c614e92be",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "IgT49V2yY6GbhhPn",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"video_metadata\": {\n    \"video_title\": \"string\",\n    \"description\": \"string\",\n    \"on_video_title\": \"string\"\n  },\n  \"images\": [\n    {\n      \"id\": 1,\n      \"prompt\": \"string\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 2,\n      \"prompt\": \"string\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 3,\n      \"prompt\": \"string\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 4,\n      \"prompt\": \"string\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 5,\n      \"prompt\": \"string\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 6,\n      \"prompt\": \"string\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 7,\n      \"prompt\": \"string\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 8,\n      \"prompt\": \"string\",\n      \"duration\": 3.75\n    }\n  ],\n  \"voiceover\": [\n    \"string\"\n  ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1080,
+        360
+      ],
+      "id": "affb78a6-792e-4727-97a5-2badc3795078",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI storytelling agent. You must strictly follow these instructions when generating content:\n\n1. Story Type\nCreate a super realistic scary and mystery story.\n\nPerspective: First-person. The narrator is a woman.\n\nGenre: No fantasy. No supernatural. No sci-fi.\n\nThe story must feel like it could actually happen to anyone.\n\nAvoid clichés. Focus on believable tension and unique situations.\n\n2. Voiceover Requirements\nWrite one continuous 30-second monologue.\n\nKeep the language casual, simple, and emotionally grounded.\n\nUse natural pacing — imagine someone nervously or hesitantly recalling something strange or terrifying.\n\nThe story must be complete — with a beginning, buildup, and creepy or mysterious end (but not a cliffhanger).\n\nThe emotion should build subtly and end with lingering discomfort or confusion.\n\n3. Image Prompts\nCreate 8 image prompts that align precisely with the voiceover.\n\nEach image should be visually powerful, detailed, and evoke a strong feeling of realism and tension.\n\nDo not repeat generic prompts like \"scared girl\" or \"dark room.\"\n\nUse innovative and specific scenarios that match the unique story.\n\nEach image duration: 3.75 seconds.\n\nFor example: Instead of saying “a creepy hallway”, say “dim hallway in an old apartment complex, with one flickering ceiling bulb and a half-open door at the end.”\n\n4. Metadata Formatting\nAll fields below are mandatory:\n\nvideo_title: Must be exactly 4 words + one hashtag (in #CamelCase format).\n(e.g., \"I Heard A Knock #UrbanChills\")\n\ndescription: Exactly 20 words including at least one trending hashtag. Keep it gripping.\n(e.g., \"I locked my door but someone still knocked. #CreepyStory #LateNightThoughts\")\n\non_video_title: Same as video_title without the hashtag.\n\nFINAL OUTPUT FORMAT\njson\n{\n  \"video_metadata\": {\n    \"video_title\": \"Only 4 words and one hashtag in format #HashTag\",\n    \"description\": \"Exactly 20 words including trending hashtags in this format: #HashTag\",\n    \"on_video_title\": \"Catchy 4 words\"\n  },\n  \"images\": [\n    {\n      \"id\": 1,\n      \"prompt\": \"Image prompt of a realistic scene\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 2,\n      \"prompt\": \"Image prompt\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 3,\n      \"prompt\": \"Image prompt\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 4,\n      \"prompt\": \"Image prompt\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 5,\n      \"prompt\": \"Image prompt\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 6,\n      \"prompt\": \"Image prompt\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 7,\n      \"prompt\": \"Image prompt\",\n      \"duration\": 3.75\n    },\n    {\n      \"id\": 8,\n      \"prompt\": \"Image prompt\",\n      \"duration\": 3.75\n    }\n  ],\n  \"voiceover\": {\n    \"One continuous 30-second monologue from a first-person view. Use simple, realistic English. Make it feel natural and believable.\"\n  }\n}\n\nImportant Final Notes for the AI Agent:\n\nAlways deliver a finished story — do not leave it open-ended or incomplete.\n\nDo not use recycled storylines or imagery. Every story and visual prompt must be fresh and original.\n\nMake the story feel personal, like someone confessing something that’s haunted them quietly.\n\nMake every image prompt immersive and cinematic, like frames from a short film.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        840,
+        180
+      ],
+      "id": "f554872d-acd4-4391-a0be-c16b7a38af49",
+      "name": "Generate Content"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1oJn0FFYZ-vELSJDNaV3-Njvb04AyNkarl9TY0f9bfvE",
+          "mode": "list",
+          "cachedResultName": "Youtube Automation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1oJn0FFYZ-vELSJDNaV3-Njvb04AyNkarl9TY0f9bfvE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 9011659,
+          "mode": "list",
+          "cachedResultName": "Mystery/Scary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1oJn0FFYZ-vELSJDNaV3-Njvb04AyNkarl9TY0f9bfvE/edit#gid=9011659"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Video title": "={{ $json.output.video_metadata.video_title }}",
+            "Description": "={{ $json.output.video_metadata.description }}",
+            "On video title": "={{ $json.output.video_metadata.on_video_title }}",
+            "Image_1_prompt": "={{ $json.output.images[0].prompt }}",
+            "Image_2_prompt": "={{ $json.output.images[1].prompt }}",
+            "Image_3_prompt": "={{ $json.output.images[2].prompt }}",
+            "Image_4_prompt": "={{ $json.output.images[3].prompt }}",
+            "Image_5_prompt": "={{ $json.output.images[4].prompt }}",
+            "Image_6_prompt": "={{ $json.output.images[5].prompt }}",
+            "Image_7_prompt": "={{ $json.output.images[6].prompt }}",
+            "Image_8_prompt": "={{ $json.output.images[7].prompt }}",
+            "Audio Content": "={{ $json.output.voiceover }}",
+            "For Editing": "Prompt Updated"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Video title",
+              "displayName": "Video title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "On video title",
+              "displayName": "On video title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image_1_prompt",
+              "displayName": "Image_1_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image_2_prompt",
+              "displayName": "Image_2_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image_3_prompt",
+              "displayName": "Image_3_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image_4_prompt",
+              "displayName": "Image_4_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image_5_prompt",
+              "displayName": "Image_5_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image_6_prompt",
+              "displayName": "Image_6_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image_7_prompt",
+              "displayName": "Image_7_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image_8_prompt",
+              "displayName": "Image_8_prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Audio Content",
+              "displayName": "Audio Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Audio URL",
+              "displayName": "Audio URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "For Editing",
+              "displayName": "For Editing",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Image_drive",
+              "displayName": "Image_drive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image_1",
+              "displayName": "Image_1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image_2",
+              "displayName": "Image_2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image_3",
+              "displayName": "Image_3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image_4",
+              "displayName": "Image_4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image_5",
+              "displayName": "Image_5",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image_6",
+              "displayName": "Image_6",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image_7",
+              "displayName": "Image_7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image_8",
+              "displayName": "Image_8",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Final Video Link",
+              "displayName": "Final Video Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "For Production",
+              "displayName": "For Production",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Youtube Link",
+              "displayName": "Youtube Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Upload",
+              "displayName": "Upload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1180,
+        180
+      ],
+      "id": "35535709-deef-4798-ae89-c8bd3a2eb160",
+      "name": "Update Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "FS8DPLFm6qRBatqr",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Add story to the sheet \n**Sheet Link** [Here](https://docs.google.com/spreadsheets/d/1oJn0FFYZ-vELSJDNaV3-Njvb04AyNkarl9TY0f9bfvE/edit?gid=0#gid=0)",
+        "height": 400,
+        "width": 1240
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        400,
+        100
+      ],
+      "typeVersion": 1,
+      "id": "ff0fa40d-15b5-4a87-8824-c8da54cae868",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "755878457598891",
+        "recipientPhoneNumber": "+919489254099",
+        "textBody": "=Today's Short Idea was added in the sheet : {{ $json['Video title'] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        180
+      ],
+      "id": "5d1575e9-95c2-4325-a099-337c832a460f",
+      "name": "WhatsApp Business Cloud",
+      "webhookId": "ea02a69c-4929-4ea9-aa5d-27bd9fde0f0e",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "uJ5O3NItaKL5lED9",
+          "name": "WhatsApp account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        180
+      ],
+      "id": "ea0821dd-d279-4925-881c-d2d24ddf9e61",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Content",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Content": {
+      "main": [
+        [
+          {
+            "node": "Update Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sheet": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Business Cloud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Business Cloud": {
+      "main": [
+        []
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "56271234-bade-4b69-854f-f58678f29f92",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "72f606b05d7788978a682e3bab045de661187022009536e97c043ae369837ac4"
+  },
+  "id": "EGfKFSN823l4Vgut",
+  "tags": []
+}
